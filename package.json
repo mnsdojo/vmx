@@ -1,0 +1,29 @@
+{
+  "name": "vmx",
+  "version": "1.0.0",
+  "module": "index.ts",
+  "type": "module",
+  "description": "Download Linux ISOs from the terminal",
+  "repository": "https://github.com/mnsdojo/vmx",
+  "license": "MIT",
+  "scripts": {
+    "start": "bun run cli.ts",
+    "dev": "bun run cli.ts",
+    "build": "bun build cli.ts --compile --outfile vmx",
+    "prepublish": "bun run build"
+  },
+  "bin": {
+    "vmx": "cli.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "boxen": "^8.0.1",
+    "chalk": "^5.6.2",
+    "cli-table3": "^0.6.5"
+  }
+}
