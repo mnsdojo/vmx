@@ -15,6 +15,38 @@ check_dependencies() {
     done
 }
 
+detect_platform() {
+    local os arch
+    os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    arch=$(uname -m)
+
+    case "$os" in
+        linux)
+            platform="linux"
+            ;;
+        darwin)
+            platform="darwin"
+            ;;
+        *)
+            error "Unsupported operating system: $os"
+            ;;
+    esac
+
+    case "$arch" in
+        x86_64|amd64)
+            arch="x64"
+            ;;
+        aarch64|arm64)
+            arch="arm64"
+            ;;
+        *)
+            error "Unsupported architecture: $arch"
+            ;;
+    esac
+
+    echo "${platform}-${arch}"
+}
+
 get_latest_tag() {
     local response
     response=$(curl -sL --fail "https://api.github.com/repos/$REPO/releases/latest") \
@@ -29,11 +61,13 @@ get_latest_tag() {
 
 download_vmx() {
     local tag="$1"
-    local url="https://github.com/$REPO/releases/download/$tag/vmx-linux-x64"
+    local platform_arch="$2"
+    local url="https://github.com/$REPO/releases/download/$tag/vmx-${platform_arch}"
 
+    log "Detected platform: $platform_arch"
     log "Downloading vmx $tag from $url..."
     curl -sL --fail "$url" -o "$VMX_BIN" \
-        || error "Download failed. Check that release asset 'vmx-linux-x64' exists for tag $tag."
+        || error "Download failed. Check that release asset 'vmx-${platform_arch}' exists for tag $tag."
 
     chmod +x "$VMX_BIN"
     log "Binary installed to $VMX_BIN"
@@ -78,10 +112,11 @@ install_vmx() {
 
     mkdir -p "$VMX_DIR" || error "Failed to create directory $VMX_DIR"
 
-    local tag
+    local tag platform_arch
     tag=$(get_latest_tag)
+    platform_arch=$(detect_platform)
 
-    download_vmx "$tag"
+    download_vmx "$tag" "$platform_arch"
     add_to_path
 
     log "Installation complete! Run 'vmx' in a new shell to get started."

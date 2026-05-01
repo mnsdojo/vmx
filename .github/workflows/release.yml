@@ -10,7 +10,19 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: macos-latest
+            platform: darwin
+            arch: x64
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -22,16 +34,21 @@ jobs:
         run: bun install
 
       - name: Build
-        run: bun build cli.ts --compile --outfile vmx-linux-x64
+        run: bun build cli.ts --compile --outfile vmx-${{ matrix.platform }}-${{ matrix.arch }}
 
-      - name: Create checksums
-        run: sha256sum vmx-linux-x64 > checksums.txt
+      - name: Create checksums (Linux)
+        if: matrix.platform == 'linux'
+        run: sha256sum vmx-${{ matrix.platform }}-${{ matrix.arch }} > checksums-${{ matrix.platform }}-${{ matrix.arch }}.txt
+
+      - name: Create checksums (macOS)
+        if: matrix.platform == 'darwin'
+        run: shasum -a 256 vmx-${{ matrix.platform }}-${{ matrix.arch }} > checksums-${{ matrix.platform }}-${{ matrix.arch }}.txt
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            vmx-linux-x64
-            checksums.txt
+            vmx-${{ matrix.platform }}-${{ matrix.arch }}
+            checksums-${{ matrix.platform }}-${{ matrix.arch }}.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

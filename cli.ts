@@ -8,6 +8,7 @@ import boxen from "boxen";
 
 import { UbuntuProvider, DebianProvider, RockyProvider, AlmaProvider, ArchProvider, FedoraProvider } from "./providers/providers.ts";
 import type { DistroRelease } from "./providers/type.ts";
+import { listVMs, createVM, startVM, stopVM, deleteVM, openGUI, detectHypervisors } from "./vm.ts";
 
 const DISTROS = [
   { key: "ubuntu", name: "Ubuntu", Provider: UbuntuProvider, color: "hex(#E95420)" },
@@ -24,8 +25,8 @@ function clear() {
 
 function logo() {
   const title = chalk.cyan.bold("  ______vmx______  ");
-  const subtitle = chalk.dim("Download Linux ISOs easily");
-  const version = chalk.dim("v1.0.0");
+  const subtitle = chalk.dim("Download ISOs & Manage VMs");
+  const version = chalk.dim("v2.0.0");
   
   console.log(boxen(`${title}\n${subtitle} ${version}`, {
     padding: { top: 0, bottom: 0, left: 2, right: 2 },
@@ -135,16 +136,18 @@ async function showMainMenu(): Promise<number> {
   clear();
   logo();
   console.log(chalk.bold("Select a distribution:") + "\n");
-  
+
   for (let i = 0; i < DISTROS.length; i += 1) {
     const d = DISTROS[i];
     if (d !== undefined) console.log(`  ${chalk.cyan(`[${i + 1}]`)}  ${chalk.hex(d.color)(d.name)}`);
   }
   console.log();
+  console.log(`  ${chalk.cyan(`[${DISTROS.length + 1}]`)}  ${chalk.hex("#FF6B6B")("VM Management")}`);
+  console.log();
   console.log(`  ${chalk.cyan("[0]")}  ${chalk.dim("Exit")}`);
   console.log();
-  
-  return prompt(DISTROS.map(d => d.name));
+
+  return prompt([...DISTROS.map(d => d.name), "vm"]);
 }
 
 async function showReleases(distro: typeof DISTROS[0]): Promise<number> {
@@ -219,38 +222,148 @@ async function copyUrl(url: string): Promise<void> {
   console.log(chalk.dim(url));
 }
 
+async function showVMMenu(): Promise<number> {
+  clear();
+  logo();
+  console.log(chalk.bold("VM Management") + "\n");
+
+  const hypervisors = detectHypervisors();
+  if (hypervisors.length === 0) {
+    console.log(chalk.yellow("No hypervisors found. Install QEMU or UTM (macOS).") + "\n");
+  } else {
+    console.log(chalk.green(`Available: ${hypervisors.join(", ")}`) + "\n");
+  }
+
+  const vms = listVMs();
+  if (vms.length > 0) {
+    console.log(chalk.bold("Your VMs:") + "\n");
+    vms.forEach((vm, i) => {
+      const status = vm.status === "running" ? chalk.green("●") : chalk.dim("○");
+      console.log(`  ${chalk.cyan(`[${i + 1}]`)} ${status} ${vm.name} (${vm.memory}MB, ${vm.cpus} CPU)`);
+    });
+    console.log();
+  }
+
+  console.log(`  ${chalk.cyan("[c]")}  Create VM`);
+  console.log(`  ${chalk.cyan("[s]")}  Start VM`);
+  console.log(`  ${chalk.cyan("[t]")}  Stop VM`);
+  console.log(`  ${chalk.cyan("[d]")}  Delete VM`);
+  console.log(`  ${chalk.cyan("[g]")}  Open GUI`);
+  console.log();
+  console.log(`  ${chalk.cyan("[0]")}  ${chalk.dim("Back to Main Menu")}`);
+  console.log();
+
+  return prompt(["back", "create", "start", "stop", "delete", "gui"]);
+}
+
+async function promptText(question: string): Promise<string> {
+  const readline = await import("readline");
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+async function createVMFromISO(): Promise<void> {
+  clear();
+  logo();
+  console.log(chalk.bold("Create VM from ISO") + "\n");
+
+  const name = await promptText("VM name: ");
+  if (!name) return;
+
+  const isoPath = await promptText("ISO path (or Enter to skip): ");
+  const memory = parseInt(await promptText("Memory in MB (default 2048): ")) || 2048;
+  const cpus = parseInt(await promptText("CPUs (default 2): ")) || 2;
+  const diskSize = parseInt(await promptText("Disk size in GB (default 20): ")) || 20;
+
+  try {
+    const vm = createVM(name, isoPath || undefined, memory, cpus, diskSize);
+    console.log(chalk.green(`\n✓ VM created: ${vm.name}`));
+  } catch (e: any) {
+    console.log(chalk.red(`\n✗ Error: ${e.message}`));
+  }
+
+  console.log();
+  console.log(chalk.yellow("Press Enter to continue..."));
+  await prompt(["continue"]);
+}
+
 async function main() {
   while (true) {
     const choice = await showMainMenu();
-    
+
     if (choice === 0) {
       console.log(chalk.cyan("\nThanks for using vmx!\n"));
       process.exit(0);
     }
-    
+
+    if (choice === DISTROS.length + 1) {
+      await handleVMMenu();
+      continue;
+    }
+
     const distro = DISTROS[choice - 1];
     if (!distro) continue;
-    
+
     const versionChoice = await showReleases(distro);
-    
+
     if (versionChoice === 0) continue;
-    
+
     const releases = await new distro.Provider().getReleases();
     const release = releases[versionChoice - 1];
-    
+
     if (!release) continue;
-    
+
     const action = await showDownload(release);
-    
+
     if (action === 1 && release.isoUrl) {
       await downloadIso(release.isoUrl);
     } else if (action === 2 && release.isoUrl) {
       await copyUrl(release.isoUrl);
     }
-    
+
     console.log();
     console.log(chalk.yellow("Press Enter to continue..."));
     await prompt(["continue"]);
+  }
+}
+
+async function handleVMMenu(): Promise<void> {
+  while (true) {
+    const choice = await showVMMenu();
+    const option = ["back", "create", "start", "stop", "delete", "gui"][choice];
+
+    if (option === "back") return;
+
+    try {
+      if (option === "create") {
+        await createVMFromISO();
+      } else if (option === "start") {
+        const name = await promptText("VM name to start: ");
+        if (name) { startVM(name); console.log(chalk.green(`✓ Started ${name}`)); }
+      } else if (option === "stop") {
+        const name = await promptText("VM name to stop: ");
+        if (name) { stopVM(name); console.log(chalk.green(`✓ Stopped ${name}`)); }
+      } else if (option === "delete") {
+        const name = await promptText("VM name to delete: ");
+        if (name) { deleteVM(name); console.log(chalk.green(`✓ Deleted ${name}`)); }
+      } else if (option === "gui") {
+        openGUI();
+      }
+    } catch (e: any) {
+      console.log(chalk.red(`\n✗ Error: ${e.message}`));
+    }
+
+    if (option !== "back") {
+      console.log();
+      console.log(chalk.yellow("Press Enter to continue..."));
+      await prompt(["continue"]);
+    }
   }
 }
 
