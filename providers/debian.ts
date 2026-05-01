@@ -61,7 +61,20 @@ export class DebianProvider implements DistroProvider {
 
     return sorted.map((r) => ({
       ...r,
-      isoUrl: `${baseUrl}${r.version}/amd64/iso-dvd/`,
+      isoUrl: `${baseUrl}${r.version}/amd64/iso-cd/debian-${r.version}-amd64-netinst.iso`,
+      isoType: 'desktop' as const,
+      isos: [
+        {
+          version: `${r.version}-desktop`,
+          isoUrl: `${baseUrl}${r.version}/amd64/iso-dvd/debian-${r.version}-amd64-DVD-1.iso`,
+          isoSize: 'DVD Desktop',
+        },
+        {
+          version: `${r.version}-netinst`,
+          isoUrl: `${baseUrl}${r.version}/amd64/iso-cd/debian-${r.version}-amd64-netinst.iso`,
+          isoSize: 'Net Install',
+        },
+      ],
       defaultMirror: baseUrl,
     }));
   }

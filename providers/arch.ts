@@ -54,6 +54,19 @@ export class ArchProvider implements DistroProvider {
       name: `Arch Linux ${version}`,
       isLatest: index === 0,
       isoUrl: `${baseUrl}iso/${version}/archlinux-${version}-x86_64.iso`,
+      isoType: 'minimal' as const,
+      isos: [
+        {
+          version: `${version}-base`,
+          isoUrl: `${baseUrl}iso/${version}/archlinux-${version}-x86_64.iso`,
+          isoSize: 'Base (CLI install)',
+        },
+        {
+          version: `${version}-archinstall`,
+          isoUrl: `${baseUrl}iso/${version}/archlinux-${version}-x86_64.iso`,
+          isoSize: 'With archinstall (guided)',
+        },
+      ],
       mirrors: ARCH_MIRRORS,
       defaultMirror: baseUrl,
     }));

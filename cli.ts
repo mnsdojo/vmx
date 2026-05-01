@@ -182,7 +182,7 @@ async function showReleases(distro: typeof DISTROS[0]): Promise<number> {
   return prompt(options);
 }
 
-async function showDownload(release: DistroRelease): Promise<number> {
+async function showDownload(release: DistroRelease, selectedIsoIndex: number = 0): Promise<{action: number, isoIndex: number}> {
   clear();
   logo();
   console.log(chalk.bold("Download") + "\n");
@@ -191,6 +191,19 @@ async function showDownload(release: DistroRelease): Promise<number> {
   console.log();
   console.log(`  ${chalk.cyan("Mirror:")} ${release.defaultMirror}`);
   console.log();
+
+  const isos = release.isos || [];
+  let currentIsoUrl = release.isoUrl || '';
+
+  if (isos.length > 0) {
+    console.log(chalk.bold("Available ISOs:") + "\n");
+    isos.forEach((iso, i) => {
+      const marker = i === selectedIsoIndex ? chalk.green("▶") : " ";
+      console.log(`  ${marker} ${chalk.cyan(`[${i + 1}]`)} ${iso.isoSize || iso.version}  ${chalk.dim(iso.isoUrl)}`);
+    });
+    console.log();
+    currentIsoUrl = isos[selectedIsoIndex]?.isoUrl || currentIsoUrl;
+  }
   
   if (release.mirrors?.length) {
     console.log(chalk.bold(`All mirrors (${release.mirrors.length}):`) + "\n");
@@ -204,17 +217,22 @@ async function showDownload(release: DistroRelease): Promise<number> {
     console.log();
   }
   
-  console.log(chalk.cyan("ISO URL:"));
-  console.log(`  ${chalk.dim(release.isoUrl)}`);
+  console.log(chalk.cyan("Selected ISO URL:"));
+  console.log(`  ${chalk.dim(currentIsoUrl)}`);
   console.log();
   
   console.log(chalk.bold("Actions:"));
   console.log(`  ${chalk.cyan("[1]")}  Download`);
   console.log(`  ${chalk.cyan("[2]")}  Copy URL`);
+  if (isos.length > 0) {
+    console.log(`  ${chalk.cyan("[n]")}  Select different ISO (1-${isos.length})`);
+  }
   console.log(`  ${chalk.cyan("[0]")}  ${chalk.dim("Back")}`);
   console.log();
   
-  return prompt(["back", "download", "copy"]);
+  const options = ["back", "download", "copy"];
+  if (isos.length > 0) options.push("select-iso");
+  return { action: await prompt(options), isoIndex: selectedIsoIndex };
 }
 
 async function copyUrl(url: string): Promise<void> {
@@ -319,12 +337,25 @@ async function main() {
 
     if (!release) continue;
 
-    const action = await showDownload(release);
+    let selectedIsoIndex = 0;
+    let result = await showDownload(release, selectedIsoIndex);
 
-    if (action === 1 && release.isoUrl) {
-      await downloadIso(release.isoUrl);
-    } else if (action === 2 && release.isoUrl) {
-      await copyUrl(release.isoUrl);
+    while (result.action === 3) {
+      const isoChoice = await promptText("Enter ISO number (1-" + (release.isos?.length || 1) + "): ");
+      const idx = parseInt(isoChoice) - 1;
+      if (release.isos && idx >= 0 && idx < release.isos.length) {
+        selectedIsoIndex = idx;
+      }
+      result = await showDownload(release, selectedIsoIndex);
+    }
+
+    const selectedIso = release.isos?.[selectedIsoIndex];
+    const downloadUrl = selectedIso?.isoUrl || release.isoUrl || '';
+
+    if (result.action === 1 && downloadUrl) {
+      await downloadIso(downloadUrl);
+    } else if (result.action === 2 && downloadUrl) {
+      await copyUrl(downloadUrl);
     }
 
     console.log();

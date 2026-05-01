@@ -55,7 +55,20 @@ export class AlmaProvider implements DistroProvider {
       version,
       name: `AlmaLinux ${version}`,
       isLatest: index === 0,
-      isoUrl: `${baseUrl}${version}/isos/x86_64/`,
+      isoUrl: `${baseUrl}${version}/isos/x86_64/AlmaLinux-${version}-x86_64-dvd.iso`,
+      isoType: 'desktop' as const,
+      isos: [
+        {
+          version: `${version}-dvd`,
+          isoUrl: `${baseUrl}${version}/isos/x86_64/AlmaLinux-${version}-x86_64-dvd.iso`,
+          isoSize: 'DVD (Full)',
+        },
+        {
+          version: `${version}-minimal`,
+          isoUrl: `${baseUrl}${version}/isos/x86_64/AlmaLinux-${version}-x86_64-minimal.iso`,
+          isoSize: 'Minimal',
+        },
+      ],
       mirrors: ALMA_MIRRORS,
       defaultMirror: baseUrl,
     }));

@@ -52,7 +52,25 @@ export class FedoraProvider implements DistroProvider {
       version,
       name: `Fedora ${version}`,
       isLatest: index === 0,
-      isoUrl: `${baseUrl}${version}/Everything/x86_64/iso/`,
+      isoUrl: `${baseUrl}${version}/Workstation/x86_64/iso/Fedora-Workstation-Live-x86_64-${version}-1.2.iso`,
+      isoType: 'desktop' as const,
+      isos: [
+        {
+          version: `${version}-workstation`,
+          isoUrl: `${baseUrl}${version}/Workstation/x86_64/iso/Fedora-Workstation-Live-x86_64-${version}-1.2.iso`,
+          isoSize: 'Workstation (GNOME)',
+        },
+        {
+          version: `${version}-server`,
+          isoUrl: `${baseUrl}${version}/Server/x86_64/iso/Fedora-Server-dvd-x86_64-${version}-1.2.iso`,
+          isoSize: 'Server',
+        },
+        {
+          version: `${version}-kde`,
+          isoUrl: `${baseUrl}${version}/Spins/x86_64/iso/Fedora-KDE-Live-x86_64-${version}-1.2.iso`,
+          isoSize: 'KDE Spin',
+        },
+      ],
       mirrors: FEDORA_MIRRORS,
       defaultMirror: baseUrl,
     }));

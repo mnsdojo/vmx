@@ -59,7 +59,20 @@ export class UbuntuProvider implements DistroProvider {
       version,
       name: `Ubuntu ${version}`,
       isLatest: index === 0,
-      isoUrl: `${baseUrl}${version}/ubuntu-${version}-live-server-amd64.iso`,
+      isoUrl: `${baseUrl}${version}/ubuntu-${version}-desktop-amd64.iso`,
+      isoType: 'desktop' as const,
+      isos: [
+        {
+          version: `${version}-desktop`,
+          isoUrl: `${baseUrl}${version}/ubuntu-${version}-desktop-amd64.iso`,
+          isoSize: 'Desktop ISO',
+        },
+        {
+          version: `${version}-server`,
+          isoUrl: `${baseUrl}${version}/ubuntu-${version}-live-server-amd64.iso`,
+          isoSize: 'Server ISO',
+        },
+      ],
       mirrors: UBUNTU_MIRRORS,
       defaultMirror: baseUrl,
     }));

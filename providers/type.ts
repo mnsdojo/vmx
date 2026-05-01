@@ -20,6 +20,8 @@ export interface DistroRelease {
   releaseDate?: string;
   isLatest: boolean;
   isoUrl?: string;
+  isoType?: 'desktop' | 'server' | 'minimal' | 'dvd';
+  isos?: DistroIso[];
   mirrors?: DistroMirror[];
   defaultMirror?: string;
   isoSize?: string;
